@@ -184,7 +184,10 @@ class WatchHelper {
   }
 
   filterPath(entry) {
-    const {stats} = entry;
+    const stats = entry.dirent || entry.stats;
+    // const {stats} = entry;
+    // console.log(stats);
+
     if (stats && stats.isSymbolicLink()) return this.filterDir(entry);
     const resolvedPath = this.entryPath(entry);
     const matchesGlob = this.hasGlob && typeof this.globFilter === 'function' ?
@@ -217,7 +220,8 @@ class WatchHelper {
         });
       });
     }
-    return !this.unmatchedGlob && this.fsw._isntIgnored(this.entryPath(entry), entry.stats);
+    const estats = entry.dirent || entry.stats;
+    return !this.unmatchedGlob && this.fsw._isntIgnored(this.entryPath(entry), estats);
   }
 }
 
@@ -733,8 +737,8 @@ _isIgnored(path, stats) {
   return this._userIgnored([path, stats]);
 }
 
-_isntIgnored(path, stat) {
-  return !this._isIgnored(path, stat);
+_isntIgnored(path, stats) {
+  return !this._isIgnored(path, stats);
 }
 
 /**
@@ -776,6 +780,7 @@ _getWatchedDir(directory) {
 */
 _hasReadPermissions(stats) {
   if (this.options.ignorePermissionErrors) return true;
+  if (!stats.mode) return true;
 
   // stats.mode may be bigint
   const md = stats && Number.parseInt(stats.mode);
@@ -873,7 +878,7 @@ _addPathCloser(path, closer) {
 }
 
 _readdirp(root, opts) {
-  const options = Object.assign({type: 'all', alwaysStat: true, lstat: true}, opts);
+  const options = Object.assign({type: 'all'}, opts);
   let stream = readdirp(root, options);
   this._streams.add(stream);
   stream.once('close', () => {
